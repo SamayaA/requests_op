@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime
+import json
 # импортируем pprint для более комфортного вывода информации
 from pprint import pprint
 
@@ -7,6 +8,7 @@ class YaUploader:
     def __init__(self, token_yandex: str , token_vk: str):
         self.token_yandex = token_yandex
         self.token_vk = token_vk
+        self.file_json = list()
 
     def upload(self, file: str , file_name : str):
         API_BASE_URL = "https://cloud-api.yandex.net/"
@@ -33,36 +35,41 @@ class YaUploader:
          'extended' : '1'
         }
         res = requests.get(URL, params=params , stream=True )
-        file_json = list()
         try :
             res_json = res.json()['response']
             for photo in res_json['items'] :
-                file_json.append(dict())
+                self.file_json.append(dict())
 
                 name_exist = 0
-                if (len(file_json) != 1) :
-                    for file in file_json :
+                if (len(self.file_json) != 1) :
+                    for file in self.file_json :
                         if file['file_name'] in str(photo['likes']['count']) :
-                            file_json[-1]['file_name'] = str(photo['likes']['count']) + ' ' + str(datetime.utcfromtimestamp(photo['date']).strftime('%Y-%m-%d '))
+                            self.file_json[-1]['file_name'] = str(photo['likes']['count']) + ' ' + str(datetime.utcfromtimestamp(photo['date']).strftime('%Y-%m-%d '))
                             name_exist = 1
                             break
                 if name_exist != 1 :
-                   file_json[-1]['file_name'] = str(photo['likes']['count'])  
+                   self.file_json[-1]['file_name'] = str(photo['likes']['count'])  
 
-                file_json[-1]['height'] = photo['sizes'][-1]['height']
-                file_json[-1]['width'] = photo['sizes'][-1]['width']
-                file_json[-1]['type'] = photo['sizes'][-1]['type']
-                file_json[-1]['date'] = str(photo['date'])
+                self.file_json[-1]['height'] = photo['sizes'][-1]['height']
+                self.file_json[-1]['width'] = photo['sizes'][-1]['width']
+                self.file_json[-1]['type'] = photo['sizes'][-1]['type']
+                self.file_json[-1]['date'] = str(photo['date'])
 
                 file = requests.get(photo['sizes'][-1]['url']).content #file to upload to yandex disk
-                self.upload(file , file_json[-1]['file_name']) # upload photo to yandex disk
+                self.upload(file , self.file_json[-1]['file_name']) # upload photo to yandex disk
         except KeyError :
             print ('Params of https://api.vk.com/method/photos.get request are incorrect')
-        return file_json
+    
+    def data_to_json(self) :
+        with open('data.json', 'w', encoding='utf-8') as f:
+            json.dump(self.file_json, f, ensure_ascii=False)
 
 if __name__ == '__main__':
     path_to_file = 'Users/Samaya/Desktop/Netology/OOP/requests/Netology'
     token_yandex = ...
     token_vk = ...
     uploader = YaUploader(token_yandex , token_vk)
-    result_json = uploader.profile_photos()
+    uploader.profile_photos()
+    uploader.data_to_json()
+
+
