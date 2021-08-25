@@ -1,4 +1,5 @@
 import requests
+from tqdm import tqdm
 from datetime import datetime
 import json
 from pprint import pprint
@@ -16,15 +17,16 @@ class YaUploader:
             'authorization': f'OAuth {self.token_yandex}'
         }
         response = requests.get(API_BASE_URL + "v1/disk", headers=headers )
-        r = requests.get(API_BASE_URL + 'v1/disk/resources/upload' , params={'path':'Netology/' + file_name + '.jpg'} , headers=headers , stream=True )
+        r = requests.get(API_BASE_URL + 'v1/disk/resources/upload' ,
+         params={'path':'Netology/' + file_name + '.jpg'} , headers=headers , stream=True )
         try :
             upload_url = r.json()['href']
             r = requests.put(upload_url , headers=headers , files={'file' : file})
         except KeyError :
-            print(f'File with {file_name}.jpg  name already is on the disk')
+            print(f'\nFile with {file_name}.jpg  name already is on the disk')
 
 
-    def profile_photos (self) :
+    def profile_photos (self , count=7) :
         URL = 'https://api.vk.com/method/photos.get'
         self.file_json = list()
         params = {
@@ -37,25 +39,29 @@ class YaUploader:
         res = requests.get(URL, params=params , stream=True )
         try :
             res_json = res.json()['response']
-            for photo in res_json['items'] :
+            # bar_photo = IncrementBar('Loading the photo' , max = len(res_json['items']['count']))
+            pprint(res_json)
+            photo = res_json['items']
+            for i in tqdm(range(min(count , len(res_json['items'])))) :
                 self.file_json.append(dict())
                 # check same name existence and create the name
                 name_exist = 0
                 if (len(self.file_json) > 1) :
-                    for i in range (len(self.file_json)-1) :
-                        if self.file_json[i]['file_name'] in str(photo['likes']['count']) :
-                            self.file_json[-1]['file_name'] = str(photo['likes']['count']) + ' ' + str(datetime.utcfromtimestamp(photo['date']).strftime('%Y-%m-%d '))
+                    for j in range (len(self.file_json)-1) :
+                        if self.file_json[j]['file_name'] in str(photo[i]['likes']['count']) :
+                            self.file_json[-1]['file_name'] = (str(photo[i]['likes']['count']) + ' ' 
+                            + str(datetime.utcfromtimestamp(photo[i]['date']).strftime('%Y-%m-%d ')))
                             name_exist = 1
                             break
                 if name_exist != 1 :
-                    self.file_json[-1]['file_name'] = str(photo['likes']['count'])  
+                    self.file_json[-1]['file_name'] = str(photo[i]['likes']['count'])  
                 #data of photo
-                self.file_json[-1]['height'] = photo['sizes'][-1]['height']
-                self.file_json[-1]['width'] = photo['sizes'][-1]['width']
-                self.file_json[-1]['type'] = photo['sizes'][-1]['type']
-                self.file_json[-1]['date'] = str(photo['date'])
+                self.file_json[-1]['height'] = photo[i]['sizes'][-1]['height']
+                self.file_json[-1]['width'] = photo[i]['sizes'][-1]['width']
+                self.file_json[-1]['type'] = photo[i]['sizes'][-1]['type']
+                self.file_json[-1]['date'] = str(photo[i]['date'])
 
-                file = requests.get(photo['sizes'][-1]['url']).content #file to upload to yandex disk
+                file = requests.get(photo[i]['sizes'][-1]['url']).content #file to upload to yandex disk
                 self.upload(file , self.file_json[-1]['file_name']) # upload photo to yandex disk
 
         except KeyError :
