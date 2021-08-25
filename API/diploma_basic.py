@@ -39,8 +39,6 @@ class YaUploader:
         res = requests.get(URL, params=params , stream=True )
         try :
             res_json = res.json()['response']
-            # bar_photo = IncrementBar('Loading the photo' , max = len(res_json['items']['count']))
-            pprint(res_json)
             photo = res_json['items']
             for i in tqdm(range(min(count , len(res_json['items'])))) :
                 self.file_json.append(dict())
